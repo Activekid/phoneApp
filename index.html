@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="newsApp">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>index</title>
+	<link rel="stylesheet" href="css/weui.css" />
+	<link rel="stylesheet" href="css/swiper.css" />
+</head>
+<body>
+	<div ui-view=""></div>
+</body>
+	<script src="js/angular.js"></script>
+	<script src="js/angular-ui-router.js"></script>
+	<script src="js/swiper.js"></script>
+	<script>
+		//主模板的定义
+		var app = angular.module('newsApp',['routers','directives','controllers']);
+		//路由模块的定义
+		var routers = angular.module('routers',['ui.router']);
+		routers.config(['$stateProvider','$urlRouterProvider',function($stateProvider,$urlRouterProvider){
+			//第一层路由index
+			$stateProvider.state('index',{
+				url:'/index',
+				controller:'indexCtrl',
+				templateUrl:'template/index.html'
+				//第二层路由recommend
+			}).state('index.recommend',{
+				url:'/recommend/:id',
+				controller:'recommendCtrl',
+				templateUrl:'template/recommend.html'
+			}).state('index.hot',{
+				url:'/hot/:id',
+				templateUrl:'template/hot.html'
+			}).state('index.entertaiment',{
+				url:'/entertainment/:id',
+				templateUrl:'template/entertainment.html'
+			}).state('search', {
+				url: '/search',
+				controller: 'homeCtrl',
+				templateUrl: 'template/search.html'
+				//第一层路由detail
+			}).state('detail',{
+				url:'/detail/:id',
+				controller:'detailCtrl',
+				templateUrl:'template/detail.html'
+			}).state('insert',{
+				url:'/insert',
+				controller:'insertCtrl',
+				templateUrl:'template/insert.html'
+			}).state('login',{
+				url:'/login',
+				controller:'loginCtrl',
+				templateUrl:'template/login.html'
+			})
+			//默认进入的路由页面
+			$urlRouterProvider.when('','/index/recommend/6')
+		}])
+		//控制器模块
+		var controllers = angular.module('controllers',[]);
+		controllers.controller('indexCtrl',['$scope',function($scope){
+			$scope.tabs = 1;
+			$scope.changeTab = function(tabs){
+				$scope.tabs = tabs
+			}
+		}]).controller('recommendCtrl',['$scope','$http','$state',function($scope,$http,$state){
+			$scope.isSearch = false ;
+			$scope.search = function(){
+				$scope.isSearch = true
+			}
+			$scope.cancel = function(){
+				$scope.searchName = ''
+				$scope.isSearch = false
+			}
+			$scope.isShowActionSheet = false
+			$scope.showActionSheet = function(){
+				$scope.isShowActionSheet = true
+			}
+			$scope.hideActionSheet = function(){
+				$scope.isShowActionSheet = false
+			}
+			$scope.searchName = '';
+			$scope.isloadMore = false;
+			$scope.page = 1;
+			$scope.news = [];
+			$scope.sort = true;
+			$scope.loadMore = function(){
+				$scope.isLoadMore = false;
+				$http.get('js/show_list.json',{
+					params:{
+							page:$scope.page++,
+							channel_id:$state.params.id
+					}
+				}).success(function(data){
+					console.log(data);
+					$scope.news = $scope.news.concat(data.news_list);
+					$scope.isLoadMore = true
+				})
+			}
+			$scope.loadMore();
+		}]).controller('detailCtrl',['$scope','$http','$state','$sce',function($scope,$http,$state,$sce){
+			console.log($state.params.id);
+			$http.get('js/show_detail'+$state.params.id+'.json',{
+				params: {
+					id:$state.params.id
+				}
+			}).success(function(data){
+				console.log(data);
+				$scope.new = data.news_list[0]
+			})
+			$scope.isGallery = false;
+			$scope.imgUrl = '';
+			$scope.gallery = function(imgUrl){
+				$scope.isGallery = true;
+				$scope.imgUrl = imgUrl;
+			}
+		}]).controller('insertCtrl',['$scope','$http',function($scope,$http){
+			$scope.submit = function(){
+				console.log($scope.title)
+				console.log($scope.text)
+				$http.get('http://localhost:81/news/php/index.php/news_api/insert_news',{
+					params:{
+						title:$scope.title,
+						text:$scope.text
+					}
+				}).success(function(data){
+					console.log(data)
+				})
+			}
+		}]).controller('loginCtrl',['$scope','$http','cookie','$window',function($scope,$http,cookie,$window){
+			$scope.submit = function(){
+				console.log($scope.username);
+				console.log($scope.password);
+				$http.post('http://localhost:81/news/php/index.php/login_api/login',{
+					params:{
+						username:$scope.username,
+						password:$scope.password
+					}
+				}).success(function(data){
+					cookie.setCookie('username',data.user_name);
+					cookie.setCookie('token',data.info.token);
+					$window.location.href = '#/index/recommend/6'
+				})
+			}
+		}])
+		//组件模块的定义
+		var directives = angular.module('directives',[]);
+		directives.directive('wheader',function(){
+			return {
+				templateUrl:'directive/wheader.html'
+			}
+		}).directive('wsearch',function(){
+			return {
+				templateUrl:'directive/wsearch.html'
+			}
+		}).directive('wpanel',function(){
+			return {
+				templateUrl:'directive/wpanel.html'
+			}
+		}).directive('wactionsheet',function(){
+			return {
+				templateUrl:'directive/wactionsheet.html'
+			}
+		}).directive('wcarousel',function(){
+			return {
+				templateUrl:'directive/wcarousel.html',
+				link:function(scope,ele,attr){
+					var swiper = new Swiper('.swiper-container',{
+						pagination:'.swiper-pagination',
+						paginationClickable:true
+					});
+				}
+			}
+		})
+	</script>
+</html>
